@@ -3,26 +3,30 @@ import streamlit as st
 # ==========================================
 # 1. TRANSLATION DICTIONARY
 # ==========================================
-# This dictionary contains all text strings for English (en), German (de), and Spanish (es).
 TRANS = {
     # --- Sidebar & General ---
     "sidebar_title": {"en": "⚕️ UroStone Specialist", "de": "⚕️ UroStone Spezialist", "es": "⚕️ Especialista UroStone"},
     "guidelines": {"en": "**Guidelines:** EAU & DGU", "de": "**Leitlinien:** EAU & DGU", "es": "**Guías:** EAU & DGU"},
-    "lang_select": {"en": "Select Language", "de": "Sprache wählen", "es": "Seleccionar Idioma"},
     "disclaimer": {
-        "en": "This tool is for educational purposes. Consult a doctor.",
-        "de": "Dieses Tool dient Schulungszwecken. Konsultieren Sie einen Arzt.",
-        "es": "Herramienta educativa. Consulte a un médico."
+        "en": "Educational tool. Determine AKIN based on Creatinine (mg/dL).",
+        "de": "Schulungstool. AKIN-Bestimmung basierend auf Kreatinin (mg/dL).",
+        "es": "Herramienta educativa. AKIN basado en Creatinina (mg/dL)."
     },
     "tab_acute": {"en": "🩻 Acute & Surgical", "de": "🩻 Akut & Chirurgisch", "es": "🩻 Agudo y Quirúrgico"},
     "tab_meta": {"en": "🧪 Metabolic Prophylaxis", "de": "🧪 Metaphylaxe", "es": "🧪 Profilaxis Metabólica"},
     
     # --- Acute Tab Inputs ---
     "header_acute": {"en": "Acute Stone Management", "de": "Akutes Steinmanagement", "es": "Manejo Agudo de Litiasis"},
-    "sub_patient": {"en": "1. Patient Status", "de": "1. Patientenstatus", "es": "1. Estado del Paciente"},
+    "sub_patient": {"en": "1. Patient Status & AKI", "de": "1. Patientenstatus & AKI", "es": "1. Estado del Paciente y LRA"},
+    
+    # NEW: AKIN / Creatinine Inputs
+    "creat_base": {"en": "Baseline Creatinine (mg/dL)", "de": "Basis-Kreatinin (mg/dL)", "es": "Creatinina Basal (mg/dL)"},
+    "creat_curr": {"en": "Current Creatinine (mg/dL)", "de": "Aktuelles Kreatinin (mg/dL)", "es": "Creatinina Actual (mg/dL)"},
+    "akin_res": {"en": "Detected Status:", "de": "Erkannter Status:", "es": "Estado Detectado:"},
+    "akin_norm": {"en": "Normal Renal Function", "de": "Normale Nierenfunktion", "es": "Función Renal Normal"},
+
     "check_fever": {"en": "🔥 Fever / Sepsis / UTI", "de": "🔥 Fieber / Sepsis / HWI", "es": "🔥 Fiebre / Sepsis / ITU"},
     "check_solitary": {"en": "🥔 Solitary Kidney", "de": "🥔 Einzelniere", "es": "🥔 Riñón Único"},
-    "check_aki": {"en": "📉 Renal Insufficiency (AKI)", "de": "📉 Niereninsuffizienz (AKI)", "es": "📉 Insuficiencia Renal (LRA)"},
     "check_preg": {"en": "🤰 Pregnancy", "de": "🤰 Schwangerschaft", "es": "🤰 Embarazo"},
     "pain_level": {"en": "Pain Level (VAS 1-10)", "de": "Schmerzskala (VAS 1-10)", "es": "Nivel de Dolor (EVA 1-10)"},
     
@@ -44,15 +48,25 @@ TRANS = {
         "de": "🚨 **NOTFALL: Verdacht auf infizierte Hydronephrose**\n* Sofortige Entlastung (DJ-Schiene/Nephrostomie).\n* Antibiotika erforderlich.",
         "es": "🚨 **EMERGENCIA: Hidronefrosis Infectada**\n* Descompresión inmediata (Catéter JJ/Nefrostomía).\n* Antibióticos requeridos."
     },
+    "emer_akin": {
+        "en": "🚨 **URGENCY: Acute Kidney Injury (AKIN Stage {stage})**\n* Urgent Decompression indicated.\n* Avoid NSAIDs.",
+        "de": "🚨 **DRINGLICHKEIT: Akutes Nierenversagen (AKIN Stadium {stage})**\n* Dringende Entlastung indiziert.\n* NSAR vermeiden.",
+        "es": "🚨 **URGENCIA: Lesión Renal Aguda (Estadio AKIN {stage})**\n* Descompresión urgente indicada.\n* Evitar AINEs."
+    },
     "emer_solitary": {
-        "en": "🚨 **URGENCY: Solitary Kidney/AKI**\n* Urgent Decompression or Removal indicated.",
-        "de": "🚨 **DRINGLICHKEIT: Einzelniere/AKI**\n* Dringende Entlastung oder Steinsanierung indiziert.",
-        "es": "🚨 **URGENCIA: Riñón Único/LRA**\n* Descompresión urgente o extracción indicada."
+        "en": "🚨 **URGENCY: Solitary Kidney Obstruction**",
+        "de": "🚨 **DRINGLICHKEIT: Verschluss der Einzelniere**",
+        "es": "🚨 **URGENCIA: Obstrucción de Riñón Único**"
     },
     "pain_mgmt": {
-        "en": "💊 **Pain:** NSAIDs (Diclofenac) 1st line.",
-        "de": "💊 **Schmerz:** NSAR (Diclofenac) 1. Wahl.",
-        "es": "💊 **Dolor:** AINEs (Diclofenaco) 1a línea."
+        "en": "💊 **Pain:** NSAIDs (Diclofenac) 1st line (ONLY if GFR normal).",
+        "de": "💊 **Schmerz:** NSAR (Diclofenac) 1. Wahl (NUR bei normaler GFR).",
+        "es": "💊 **Dolor:** AINEs (Diclofenaco) 1a línea (SOLO si TFG normal)."
+    },
+    "pain_avoid_nsaid": {
+        "en": "⚠️ **Pain:** Avoid NSAIDs due to AKI/Renal insufficiency! Use Metamizole or Opiates.",
+        "de": "⚠️ **Schmerz:** NSAR kontraindiziert wegen AKI! Metamizol oder Opiate nutzen.",
+        "es": "⚠️ **Dolor:** ¡Evitar AINEs por LRA! Usar Metamizol u Opiáceos."
     },
     "stable_plan": {"en": "✅ Patient stable.", "de": "✅ Patient stabil.", "es": "✅ Paciente estable."},
     
@@ -62,11 +76,6 @@ TRANS = {
     "kidney_small": {"en": "**<10mm:** SWL or RIRS.", "de": "**<10mm:** ESWL oder RIRS.", "es": "**<10mm:** LEOC o RIRS."},
     "kidney_med": {"en": "**10-20mm:** SWL (if favorable) or RIRS.", "de": "**10-20mm:** ESWL (wenn günstig) oder RIRS.", "es": "**10-20mm:** LEOC (si favorable) o RIRS."},
     "kidney_large": {"en": "**>20mm:** PCNL is 1st line.", "de": "**>20mm:** PNL ist 1. Wahl.", "es": "**>20mm:** NLP es 1a línea."},
-    "lower_pole_warn": {
-        "en": "*Lower Pole: SWL success low if anatomy unfavorable -> RIRS/PCNL.*",
-        "de": "*Unterer Pol: ESWL-Erfolg gering bei ungünstiger Anatomie -> RIRS/PNL.*",
-        "es": "*Polo Inf: Éxito LEOC bajo si anatomía desfavorable -> RIRS/NLP.*"
-    },
 
     # --- Metabolic Tab ---
     "meta_mode": {"en": "Select Mode", "de": "Modus wählen", "es": "Seleccionar Modo"},
@@ -128,9 +137,41 @@ def main():
         col_a, col_b = st.columns(2)
         with col_a:
             st.subheader(t("sub_patient"))
+            
+            # --- AKIN Score Calculation ---
+            with st.container():
+                st.markdown("#### 📉 Renal Function (AKIN Score)")
+                c1, c2 = st.columns(2)
+                with c1:
+                    creat_base = st.number_input(t("creat_base"), min_value=0.1, value=0.9, step=0.1)
+                with c2:
+                    creat_curr = st.number_input(t("creat_curr"), min_value=0.1, value=0.9, step=0.1)
+
+                # AKIN Logic
+                # Stage 1: Increase >= 0.3 mg/dl OR 1.5-2.0x baseline
+                # Stage 2: Increase > 2.0-3.0x baseline
+                # Stage 3: Increase > 3.0x baseline OR Creat >= 4.0 (with rise >= 0.5)
+                
+                akin_stage = 0
+                diff = creat_curr - creat_base
+                ratio = creat_curr / creat_base
+                
+                if (ratio > 3.0) or (creat_curr >= 4.0 and diff >= 0.5):
+                    akin_stage = 3
+                elif ratio > 2.0:
+                    akin_stage = 2
+                elif ratio >= 1.5 or diff >= 0.3:
+                    akin_stage = 1
+                
+                # Display AKIN Result
+                if akin_stage > 0:
+                    st.error(f"⚠️ **AKIN Stage {akin_stage}**")
+                else:
+                    st.success(f"✅ {t('akin_norm')}")
+            
+            st.markdown("---")
             is_fever = st.checkbox(t("check_fever"))
             is_solitary = st.checkbox(t("check_solitary"))
-            is_aki = st.checkbox(t("check_aki"))
             is_preg = st.checkbox(t("check_preg"))
             pain = st.slider(t("pain_level"), 0, 10, 5)
 
@@ -141,7 +182,6 @@ def main():
             stone_loc_idx = st.selectbox(t("stone_loc"), range(len(loc_options)), format_func=lambda x: loc_options[x])
             
             stone_size = st.number_input(t("stone_size"), min_value=1, max_value=100, value=6)
-            # 0=Yes, 1=No
             is_radio = st.radio(t("radiopaque"), ("Yes/Ja/Sí", "No/Nein")) == "Yes/Ja/Sí"
 
         st.markdown("---")
@@ -152,15 +192,29 @@ def main():
             # --- EMERGENCY LOGIC ---
             is_emergency = False
             
+            # 1. Sepsis
             if is_fever:
                 st.error(t("emer_sepsis"))
                 is_emergency = True
-            elif is_solitary or is_aki:
+            
+            # 2. AKI (AKIN > 0)
+            if akin_stage > 0:
+                # Use string formatting to insert the stage number into the translated string
+                msg = t("emer_akin").replace("{stage}", str(akin_stage))
+                st.error(msg)
+                is_emergency = True
+                
+            # 3. Solitary
+            if is_solitary:
                 st.error(t("emer_solitary"))
                 is_emergency = True
             
-            if pain > 7 and not is_emergency:
-                st.warning(t("pain_mgmt"))
+            # Pain Management Advice (NSAID contraindication if AKI)
+            if pain > 3:
+                if akin_stage > 0:
+                    st.warning(t("pain_avoid_nsaid"))
+                else:
+                    st.info(t("pain_mgmt"))
 
             # --- SURGICAL LOGIC ---
             if not is_emergency:
