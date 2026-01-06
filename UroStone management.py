@@ -8,9 +8,9 @@ TRANS = {
     "sidebar_title": {"en": "⚕️ UroStone Specialist", "de": "⚕️ UroStone Spezialist", "es": "⚕️ Especialista UroStone"},
     "guidelines": {"en": "**Guidelines:** EAU & DGU", "de": "**Leitlinien:** EAU & DGU", "es": "**Guías:** EAU & DGU"},
     "disclaimer": {
-        "en": "Educational tool. Determine AKIN based on Creatinine (mg/dL).",
-        "de": "Schulungstool. AKIN-Bestimmung basierend auf Kreatinin (mg/dL).",
-        "es": "Herramienta educativa. AKIN basado en Creatinina (mg/dL)."
+        "en": "Educational tool. Determine AKIN based on Creatinine.",
+        "de": "Schulungstool. AKIN-Bestimmung basierend auf Kreatinin.",
+        "es": "Herramienta educativa. AKIN basado en Creatinina."
     },
     "tab_acute": {"en": "🩻 Acute & Surgical", "de": "🩻 Akut & Chirurgisch", "es": "🩻 Agudo y Quirúrgico"},
     "tab_meta": {"en": "🧪 Metabolic Prophylaxis", "de": "🧪 Metaphylaxe", "es": "🧪 Profilaxis Metabólica"},
@@ -20,8 +20,9 @@ TRANS = {
     "sub_patient": {"en": "1. Patient Status & AKI", "de": "1. Patientenstatus & AKI", "es": "1. Estado del Paciente y LRA"},
     
     # NEW: AKIN / Creatinine Inputs
-    "creat_base": {"en": "Baseline Creatinine (mg/dL)", "de": "Basis-Kreatinin (mg/dL)", "es": "Creatinina Basal (mg/dL)"},
-    "creat_curr": {"en": "Current Creatinine (mg/dL)", "de": "Aktuelles Kreatinin (mg/dL)", "es": "Creatinina Actual (mg/dL)"},
+    "unit_label": {"en": "Select Creatinine Unit", "de": "Kreatinin-Einheit wählen", "es": "Seleccionar Unidad Creatinina"},
+    "creat_base": {"en": "Baseline Creatinine", "de": "Basis-Kreatinin", "es": "Creatinina Basal"},
+    "creat_curr": {"en": "Current Creatinine", "de": "Aktuelles Kreatinin", "es": "Creatinina Actual"},
     "akin_res": {"en": "Detected Status:", "de": "Erkannter Status:", "es": "Estado Detectado:"},
     "akin_norm": {"en": "Normal Renal Function", "de": "Normale Nierenfunktion", "es": "Función Renal Normal"},
 
@@ -138,23 +139,51 @@ def main():
         with col_a:
             st.subheader(t("sub_patient"))
             
-            # --- AKIN Score Calculation ---
+            # --- AKIN Score Calculation (Dual Unit) ---
             with st.container():
                 st.markdown("#### 📉 Renal Function (AKIN Score)")
+                
+                # Unit Selector
+                unit_choice = st.radio(t("unit_label"), ["mg/dL", "µmol/L"], horizontal=True)
+                
+                # Set defaults and step sizes based on unit
+                if unit_choice == "mg/dL":
+                    default_base = 0.9
+                    step_size = 0.1
+                    conv_factor = 1.0 # No conversion needed
+                else: # µmol/L
+                    default_base = 80.0 # approx 0.9 mg/dl
+                    step_size = 5.0
+                    conv_factor = 88.4 # Divide by this to get mg/dL
+
                 c1, c2 = st.columns(2)
                 with c1:
-                    creat_base = st.number_input(t("creat_base"), min_value=0.1, value=0.9, step=0.1)
+                    creat_base_input = st.number_input(
+                        f"{t('creat_base')} ({unit_choice})", 
+                        min_value=0.0, value=default_base, step=step_size
+                    )
                 with c2:
-                    creat_curr = st.number_input(t("creat_curr"), min_value=0.1, value=0.9, step=0.1)
+                    creat_curr_input = st.number_input(
+                        f"{t('creat_curr')} ({unit_choice})", 
+                        min_value=0.0, value=default_base, step=step_size
+                    )
 
-                # AKIN Logic
+                # --- INTERNAL CALCULATION (Convert everything to mg/dL) ---
+                if unit_choice == "µmol/L":
+                    creat_base = creat_base_input / conv_factor
+                    creat_curr = creat_curr_input / conv_factor
+                else:
+                    creat_base = creat_base_input
+                    creat_curr = creat_curr_input
+
+                # AKIN Logic (Standardized on mg/dL)
                 # Stage 1: Increase >= 0.3 mg/dl OR 1.5-2.0x baseline
                 # Stage 2: Increase > 2.0-3.0x baseline
                 # Stage 3: Increase > 3.0x baseline OR Creat >= 4.0 (with rise >= 0.5)
                 
                 akin_stage = 0
                 diff = creat_curr - creat_base
-                ratio = creat_curr / creat_base
+                ratio = creat_curr / creat_base if creat_base > 0 else 0
                 
                 if (ratio > 3.0) or (creat_curr >= 4.0 and diff >= 0.5):
                     akin_stage = 3
@@ -165,7 +194,7 @@ def main():
                 
                 # Display AKIN Result
                 if akin_stage > 0:
-                    st.error(f"⚠️ **AKIN Stage {akin_stage}**")
+                    st.error(f"⚠️ **AKIN Stage {akin_stage}** (Ref: {unit_choice})")
                 else:
                     st.success(f"✅ {t('akin_norm')}")
             
@@ -192,24 +221,19 @@ def main():
             # --- EMERGENCY LOGIC ---
             is_emergency = False
             
-            # 1. Sepsis
             if is_fever:
                 st.error(t("emer_sepsis"))
                 is_emergency = True
             
-            # 2. AKI (AKIN > 0)
             if akin_stage > 0:
-                # Use string formatting to insert the stage number into the translated string
                 msg = t("emer_akin").replace("{stage}", str(akin_stage))
                 st.error(msg)
                 is_emergency = True
                 
-            # 3. Solitary
             if is_solitary:
                 st.error(t("emer_solitary"))
                 is_emergency = True
             
-            # Pain Management Advice (NSAID contraindication if AKI)
             if pain > 3:
                 if akin_stage > 0:
                     st.warning(t("pain_avoid_nsaid"))
@@ -220,8 +244,6 @@ def main():
             if not is_emergency:
                 st.success(f"{t('stable_plan')} Size: {stone_size} mm.")
                 
-                # Logic Mapping based on Index
-                # 0: Kid-Low, 1: Kid-Up, 2: Ure-Prox, 3: Ure-Dist
                 is_ureter = stone_loc_idx in [2, 3]
                 is_lower_pole = stone_loc_idx == 0
                 
@@ -268,7 +290,6 @@ def main():
             with c1:
                 u_vol = st.number_input("Volume (L/24h)", 2.0)
                 u_ph = st.number_input("pH", 6.0)
-                # Stone type index mapping
                 st_opts = TRANS["st_types"][lang]
                 st_idx = st.selectbox(t("stone_type_label"), range(len(st_opts)), format_func=lambda x: st_opts[x])
             with c2:
@@ -282,12 +303,10 @@ def main():
             if st.button(t("btn_analyze")):
                 st.markdown(f"### {t('rec_title')}")
                 
-                # Logic
                 if u_vol < 2.5: st.write(t("dilution"))
                 if u_ca > 5.0: st.write(t("hypercal"))
                 if u_ox > 0.5: st.write(t("hyperox"))
                 
-                # Uric Acid Logic
                 is_uric_stone = st_idx == 2
                 if u_ua > 4.0 or is_uric_stone:
                     st.write(t("uric_acid"))
