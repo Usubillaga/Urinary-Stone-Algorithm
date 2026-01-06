@@ -91,10 +91,11 @@ TRANS = {
     "gen_advice_prot": {"en": "**3. Protein:** Limit animal protein.", "de": "**3. Protein:** Tierisches Eiweiß begrenzen.", "es": "**3. Proteína:** Limitar proteína animal."},
     "gen_advice_salt": {"en": "**4. Salt:** < 5g/day.", "de": "**4. Salz:** < 5g/Tag.", "es": "**4. Sal:** < 5g/día."},
     
+    # STONE TYPES - Added Brushite
     "st_types": {
-        "en": ["Calcium Oxalate", "Calcium Phosphate", "Uric Acid", "Struvite", "Cystine"],
-        "de": ["Calciumoxalat", "Calciumphosphat", "Harnsäure", "Infektstein/Struvit", "Cystin"],
-        "es": ["Oxalato Cálcico", "Fosfato Cálcico", "Ácido Úrico", "Estruvita", "Cistina"]
+        "en": ["Calcium Oxalate", "Calcium Phosphate (Apatite)", "Brushite (CaHPO4)", "Uric Acid", "Struvite", "Cystine"],
+        "de": ["Calciumoxalat", "Calciumphosphat (Apatit)", "Brushit (CaHPO4)", "Harnsäure", "Infektstein/Struvit", "Cystin"],
+        "es": ["Oxalato Cálcico", "Fosfato Cálcico (Apatita)", "Brushita (CaHPO4)", "Ácido Úrico", "Estruvita", "Cistina"]
     },
     
     # Detailed Drug Recommendations
@@ -104,9 +105,14 @@ TRANS = {
         "es": "💊 **Alcalinización (ej. Blemaren / Citrato-K):**\n* **Dosis:** 9-12 g/día.\n* **Meta (Profilaxis):** pH 6.2 - 6.8.\n* **Meta (Quimiólisis):** pH 7.0 - 7.2.\n* *Ajustar dosis según tiras reactivas.*"
     },
     "rec_acid": {
-        "en": "💊 **Acidification (L-Methionine):**\n* **Dose:** 200-500 mg x 3/day.\n* **Goal:** Keep pH < 6.2 (inhibits Struvite).\n* *Monitor for metabolic acidosis.*",
-        "de": "💊 **Ansäuerung (L-Methionin):**\n* **Dosis:** 200-500 mg x 3/Tag.\n* **Ziel:** pH < 6.2 halten (hemmt Struvit).\n* *Auf metabolische Azidose achten.*",
+        "en": "💊 **Acidification (L-Methionine):**\n* **Dose:** 200-500 mg x 3/day.\n* **Goal:** Keep pH < 6.2 (inhibits Struvite/Brushite).\n* *Monitor for metabolic acidosis.*",
+        "de": "💊 **Ansäuerung (L-Methionin):**\n* **Dosis:** 200-500 mg x 3/Tag.\n* **Ziel:** pH < 6.2 halten (hemmt Struvit/Brushit).\n* *Auf metabolische Azidose achten.*",
         "es": "💊 **Acidificación (L-Metionina):**\n* **Dosis:** 200-500 mg x 3/día.\n* **Meta:** pH < 6.2.\n* *Monitorizar acidosis metabólica.*"
+    },
+    "rec_brushite": {
+        "en": "🧱 **Brushite (CaHPO4) Management:**\n* **Resistance:** Resistant to SWL! PCNL/URS preferred.\n* **pH Control:** **Acidification required** (Target pH 5.8-6.2) to prevent precipitation.\n* **Rx:** L-Methionine (see above) + Thiazides if hypercalciuria.",
+        "de": "🧱 **Brushit (CaHPO4) Management:**\n* **Resistenz:** Resistent gegen ESWL! PNL/URS bevorzugt.\n* **pH-Kontrolle:** **Ansäuerung erforderlich** (Ziel pH 5.8-6.2).\n* **Rx:** L-Methionin (s.o.) + Thiazide bei Hypercalciurie.",
+        "es": "🧱 **Manejo de Brushita (CaHPO4):**\n* **Resistencia:** ¡Resistente a LEOC! RIRS/NLP preferido.\n* **Control pH:** **Acidificación necesaria** (Meta pH 5.8-6.2).\n* **Rx:** L-Metionina (ver arriba) + Tiazidas si hipercalciuria."
     },
     "rec_inf": {
         "en": "🦠 **Infection Control:**\n* **Antibiotics:** Must be based on Urine Culture/Antibiogram.\n* **Surgery:** Complete stone removal is mandatory.",
@@ -209,7 +215,7 @@ def main():
                     else: st.error(t("kidney_large"))
 
     # ============================================================
-    # TAB 2: METABOLIC PROPHYLAXIS (REVAMPED)
+    # TAB 2: METABOLIC PROPHYLAXIS
     # ============================================================
     with tab2:
         st.header(t("header_acute").replace("Acute", "Metabolic")) # Reusing header style
@@ -252,6 +258,7 @@ def main():
                 u_vol = st.number_input("Volume (L/24h)", 2.0)
                 u_ph = st.number_input("pH (Day Profile)", 6.0)
                 st_opts = TRANS["st_types"][lang]
+                # Index map: 0:CaOx, 1:CaP, 2:Brushite, 3:Uric, 4:Struvite, 5:Cystine
                 st_idx = st.selectbox("Stone Composition", range(len(st_opts)), format_func=lambda x: st_opts[x])
             with c2:
                 u_ca = st.number_input("Calcium (mmol/d)", 4.0)
@@ -268,43 +275,47 @@ def main():
                 if u_vol < 2.5:
                     st.warning(f"💧 **Dilution:** Volume {u_vol}L is too low. Target > 2.5L.")
                 
-                # B. STONE SPECIFIC PHARMACOTHERAPY
+                # B. SPECIFIC STONE LOGIC 
                 
-                # 1. Uric Acid Stones (Chemolysis or Prophylaxis)
-                if st_idx == 2: # Uric Acid
+                # 1. BRUSHITE (Index 2)
+                if st_idx == 2:
+                    st.warning(t("rec_brushite"))
+                    if u_ca > 5.0:
+                        st.write(f"- 🦴 **Hypercalciuria:** {t('rec_hypercal')}")
+                
+                # 2. Uric Acid (Index 3)
+                elif st_idx == 3:
                     st.info("🥩 **Uric Acid Management:**")
-                    st.write(t("rec_alkali")) # Blemaren instructions
+                    st.write(t("rec_alkali")) # Blemaren
                     if u_ua > 4.0:
                         st.write("- **Hyperuricosuria:** Allopurinol 100-300mg/day.")
                 
-                # 2. Struvite (Infection)
-                elif st_idx == 3: # Struvite
+                # 3. Struvite (Index 4)
+                elif st_idx == 4:
                     st.error(t("rec_inf"))
-                    st.write(t("rec_acid")) # Methionine instructions
+                    st.write(t("rec_acid")) # Methionine
                 
-                # 3. Calcium Stones (Oxalate/Phosphate)
-                else:
-                    # Hypercalciuria
-                    if u_ca > 5.0: 
-                        st.warning(f"🦴 **Hypercalciuria ({u_ca} mmol/d):**")
-                        st.write(f"- {t('rec_hypercal')}")
-                    
-                    # Hyperoxaluria
-                    if u_ox > 0.5:
-                        st.warning(f"🍃 **Hyperoxaluria ({u_ox} mmol/d):**")
-                        st.write(f"- {t('rec_hyperox')}")
-                    
-                    # Hypocitraturia
-                    if u_cit < 2.5:
-                        st.warning(f"🍋 **Hypocitraturia ({u_cit} mmol/d):**")
-                        st.write(t("rec_alkali")) # Citrate helps here too
-
-                # C. CYSTINE
-                if st_idx == 4: # Cystine
+                # 4. Cystine (Index 5)
+                elif st_idx == 5:
                     st.error("🧬 **Cystinuria:**")
                     st.write("- **Fluids:** > 3.5 L/day.")
                     st.write("- **Alkalinization:** Target pH > 7.5 (High dose Alkali-Citrate).")
                     st.write("- **Tiopronin:** If pH & fluids fail (Check Guidelines for dosing).")
+                
+                # 5. Calcium Stones (Ox/Phos)
+                else:
+                    # Generic Ca stone advice
+                    if u_ca > 5.0: 
+                        st.warning(f"🦴 **Hypercalciuria ({u_ca} mmol/d):**")
+                        st.write(f"- {t('rec_hypercal')}")
+                    
+                    if u_ox > 0.5:
+                        st.warning(f"🍃 **Hyperoxaluria ({u_ox} mmol/d):**")
+                        st.write(f"- {t('rec_hyperox')}")
+                    
+                    if u_cit < 2.5:
+                        st.warning(f"🍋 **Hypocitraturia ({u_cit} mmol/d):**")
+                        st.write(t("rec_alkali"))
 
 if __name__ == "__main__":
     main()
